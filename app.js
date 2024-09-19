@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const path = require('path'); // to access public directory
 
 const {router: usersRouter} = require('./routes/api/users');
+const {router: contactsRouter} = require('./routes/api/contacts')
 
 const app = express();
 
@@ -29,6 +30,7 @@ mongoose.connect(MONGO_URI)
 app.use('/avatars', express.static(path.join(__dirname, 'public/avatars')));
 
 app.use('/api/users', usersRouter);
+app.use('/api/contacts', contactsRouter)
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Not found' })

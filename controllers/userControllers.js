@@ -9,7 +9,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const Jimp = require('jimp');
 
-// signup and login front-end validation
+// signup, login, password-reset front-end validation
 const signupSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
@@ -18,6 +18,12 @@ const signupSchema = Joi.object({
 // subscription front-end validation
 const subscriptionSchema = Joi.object({
     subscription: Joi.string().valid('starter', 'pro', 'business').required(),
+  });
+
+// password reset front-end validation
+const resetPasswordSchema = Joi.object({
+    email: Joi.string().email().required(),
+    newPassword: Joi.string().min(6).required(),
   });
 
 // mailer provider
@@ -254,6 +260,30 @@ const uploadAva = async (req, res, next) => {
     }
 };
 
+// reset password function
+const resetPassword = async (req, res) => {
+    const { email, password } = req.body;
+    // Validate the request body
+    const { error } = signupSchema.validate({ email, password });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    try {
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      // Find the user by email and update the password
+      const user = await User.findOneAndUpdate({ email }, { password: hashedPassword });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+
 module.exports = {
     signup,
     verifyEmail,
@@ -263,5 +293,6 @@ module.exports = {
     currentUser,
     upgradeSub,
     uploadAva,
+    resetPassword,
 };
 
