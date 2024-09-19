@@ -15,7 +15,7 @@ router.get('/:contactId', auth, getContact);
 router.post('/', auth, addContactHandler);
 router.put('/:contactId', auth, updateContactHandler);
 router.delete('/:contactId', auth, removeContactHandler);
-router.patch('/contactId/favorite', auth, updateFavoriteStatusHandler);
+router.patch('/:contactId/favorite', auth, updateFavoriteStatusHandler);
 
 module.exports = {
     router,
