@@ -5,9 +5,11 @@ const tmpDir = path.join(__dirname, '../tmp');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    console.log('Saving file to:', tmpDir);  // Log where file is being saved
     cb(null, tmpDir);
   },
   filename: (req, file, cb) => {
+    console.log('Received file:', file.originalname);  // Log file name
     cb(null, file.originalname);
   },
 });

@@ -238,7 +238,7 @@ const upgradeSub = async (req, res, next) => {
   };
 
 // avatar handler  
-const avatarsDir = path.join(__dirname, '../../public/avatars');
+const avatarsDir = path.join(__dirname, '../public/avatars');
 const uploadAva = async (req, res, next) => {
     try {
         const { path: tempPath, originalname } = req.file;
@@ -246,15 +246,26 @@ const uploadAva = async (req, res, next) => {
         const filename = `${req.user._id}${ext}`;
         const resultPath = path.join(avatarsDir, filename);
         // Process the image
-        const image = await Jimp.read(tempPath);
-        await image.resize(250, 250).writeAsync(resultPath);
+        const image = await Jimp.read(tempPath).catch(err => {
+            console.error('Error processing image with Jimp:', err);
+            throw err;
+        });
+        await image.resize(250, 250).writeAsync(resultPath).catch(err => {
+            console.error('Error writing file to avatarsDir:', err);
+            throw err;
+        });
         // Remove the temp file
-        await fs.unlink(tempPath);
+        await fs.unlink(tempPath).catch(err => {
+            console.error('Error deleting temp file:', err);
+            throw err;
+        });
         // Update user's avatar URL
         const avatarURL = `/avatars/${filename}`;
         req.user.avatarURL = avatarURL;
         await req.user.save();
         res.status(200).json({ avatarURL });
+        console.log('Avatars directory:', avatarsDir);
+
     } catch (err) {
         next(err);
     }
