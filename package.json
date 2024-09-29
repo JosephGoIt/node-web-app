@@ -4,7 +4,6 @@
   "description": "Sample web application utilizing nodejs",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js"
   },
   "keywords": [],
@@ -46,5 +45,8 @@
     "socket.io": "^4.7.5",
     "uuid": "^10.0.0",
     "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": "20.1"
   }
 }
