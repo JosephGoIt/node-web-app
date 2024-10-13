@@ -41,7 +41,7 @@ const signup = async (req, res, next) => {
         // 1st level validation, signup validation to ensure required fields are populated
         const {error} = signupSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({message: error.details[0].message});
+            return res.status(400).json({message: "Invalid or missing data"});
         }
         // 2nd level validation, check if email is already registered
         const {email, password} = req.body;
@@ -51,10 +51,14 @@ const signup = async (req, res, next) => {
         }
         // Hash the password, create url for the avatar, generate a verification token
         const hashedPassword = await bcrypt.hash(password, 10);
+
         const avatarURL = gravatar.url(email, { s: '250', d: 'retro' }, true);
+
         const verificationToken = uuidv4();  // Generate a unique verification token
+
         // Log the verification token to check if it's being generated, just for debugging
-        console.log('Generated Verification Token:', verificationToken);
+        // console.log('Generated Verification Token:', verificationToken);
+
         // Create the with the info provided/generated
         const user = await User.create({
             email, 
@@ -62,8 +66,10 @@ const signup = async (req, res, next) => {
             avatarURL, 
             verificationToken
         });
+
         // Create verification link
         const verificationUrl = `${req.protocol}://${req.get('host')}/api/users/verify/${verificationToken}`;
+
         // Send verification email
         const mailOptions = {
           from: process.env.EMAIL_USER,     // Sender address (email provider/owner)
@@ -71,6 +77,7 @@ const signup = async (req, res, next) => {
           subject: 'Verify your email',     // Subject line
           text: `Click the link to verify your email: ${verificationUrl}`, // Plain text body
         };
+
         // Actual email sending
         transporter.sendMail(mailOptions, (error, info) => {
           if (error) {
@@ -96,13 +103,14 @@ const signup = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
     try {
       const { verificationToken } = req.params;
+      
       // Log the token to ensure it's being captured correctly
-      console.log("Received verification token:", verificationToken);
+      // console.log("Received verification token:", verificationToken);
+
       // Find the user by verification token
       const user = await User.findOne({ verificationToken });
-      // Log if no user is found
       if (!user) {
-        console.error("User not found with this verification token:", verificationToken);
+        // console.error("User not found with this verification token:", verificationToken);
         return res.status(404).json({ message: 'User not found' });
       }
       // Update user verification status
@@ -111,8 +119,8 @@ const verifyEmail = async (req, res, next) => {
       await user.save();             // Save changes in
       res.status(200).json({ message: 'Verification successful' });
     } catch (error) {
-      console.error("Error during verification process:", error); // Log the error details
-      res.status(500).json({ message: error.message });
+        //   console.error("Error during verification process:", error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
@@ -146,7 +154,7 @@ const resendVerificationEmail = async (req, res, next) => {
         // Acutal sending of the email using Nodemailer
         await transporter.sendMail(mailOptions);
         // Just a log email has been sent
-        console.log('Verification email sent to:', email);
+        // console.log('Verification email sent to:', email);
         // Respond with success
         res.status(200).json({ message: 'Verification email sent' });
     } catch (error) {

@@ -6,8 +6,12 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path'); // to access public directory
 
+// Import routes
 const {router: usersRouter} = require('./routes/api/users');
-const {router: contactsRouter} = require('./routes/api/contacts')
+const {router: contactsRouter} = require('./routes/api/contacts');
+
+// Swagger setup
+const { swaggerDocs, swaggerUi } = require('./swaggerConfig');  // Import swagger configuration
 
 const app = express();
 
@@ -29,8 +33,12 @@ mongoose.connect(MONGO_URI)
 // serve static files from the public folder
 app.use('/avatars', express.static(path.join(__dirname, 'public/avatars')));
 
+// Routes
 app.use('/api/users', usersRouter);
-app.use('/api/contacts', contactsRouter)
+app.use('/api/contacts', contactsRouter);
+
+// Swagger docs route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));  // Serve swagger documentation
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Not found' })
