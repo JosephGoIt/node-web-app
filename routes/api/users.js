@@ -259,7 +259,7 @@ router.post("/login", login);
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
+ *       204:
  *         description: Successfully logged out
  *         content:
  *           application/json:
