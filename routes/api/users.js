@@ -16,17 +16,11 @@ const {
 
 /**
  * @swagger
- * tags:
- *   name: Users
- *   description: User management
- */
-
-/**
- * @swagger
  * /api/users/signup:
  *   post:
- *     summary: Register a new user
- *     tags: [Users]
+ *     summary: Register a new user and send a verification email
+ *     tags:
+ *       - Users
  *     requestBody:
  *       required: true
  *       content:
@@ -34,26 +28,78 @@ const {
  *           schema:
  *             type: object
  *             required:
+ *               - name
  *               - email
  *               - password
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Full name of the user
+ *                 example: John Doe
  *               email:
  *                 type: string
- *                 description: The user's email.
- *                 example: user@example.com
+ *                 format: email
+ *                 description: User's email address
+ *                 example: johndoe@example.com
  *               password:
  *                 type: string
- *                 description: The user's password.
- *                 example: password123
+ *                 format: password
+ *                 description: User's password (minimum 6 characters)
+ *                 example: securePassword123
  *     responses:
  *       201:
- *         description: User created successfully.
+ *         description: User successfully registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: John Doe
+ *                     email:
+ *                       type: string
+ *                       example: johndoe@example.com
+ *                     subscription:
+ *                       type: string
+ *                       enum: [starter, pro, business]
+ *                       example: starter
+ *                     avatarURL:
+ *                       type: string
+ *                       example: https://www.gravatar.com/avatar/hashedemail
  *       400:
- *         description: Invalid or missing data.
+ *         description: Invalid or missing data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid or missing data
  *       409:
- *         description: Email in use.
+ *         description: Email already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Email in use
  *       500:
- *         description: Error sending email or internal server error .
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
  */
 router.post("/signup", signup);
 

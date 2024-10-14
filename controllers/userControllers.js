@@ -1,6 +1,4 @@
-const User = require('../models/user');
-const Joi = require('joi');
-const nodemailer = require('nodemailer');
+require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const gravatar = require('gravatar');
 const { v4: uuidv4 } = require('uuid');
@@ -8,32 +6,17 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs/promises');
 const path = require('path');
 const Jimp = require('jimp');
-
-// signup, login, password-reset front-end validation
-const signupSchema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
-});
-
-// subscription front-end validation
-const subscriptionSchema = Joi.object({
-    subscription: Joi.string().valid('starter', 'pro', 'business').required(),
-  });
-
-// password reset front-end validation
-const resetPasswordSchema = Joi.object({
-    email: Joi.string().email().required(),
-    newPassword: Joi.string().min(6).required(),
-  });
-
-// mailer provider
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+const User = require('../models/user');
+const Session = require('../models/session');
+const {sendEmail} = require('../helpers/sendEmail');
+const {
+        signupSchema,
+        loginSchema,
+        subscriptionSchema,
+        resetPasswordSchema,
+        changePasswordSchema,
+        contactSchema,
+} = require('../helpers/formValidation');
 
 // signup function
 const signup = async (req, res, next) => {
@@ -43,17 +26,17 @@ const signup = async (req, res, next) => {
         if (error) {
             return res.status(400).json({message: "Invalid or missing data"});
         }
+
         // 2nd level validation, check if email is already registered
-        const {email, password} = req.body;
+        const {name, email, password} = req.body;
         const existingUser = await User.findOne({email});
         if (existingUser) {
             return res.status(409).json({message: "Email in use"});
         }
+
         // Hash the password, create url for the avatar, generate a verification token
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const avatarURL = gravatar.url(email, { s: '250', d: 'retro' }, true);
-
         const verificationToken = uuidv4();  // Generate a unique verification token
 
         // Log the verification token to check if it's being generated, just for debugging
@@ -61,6 +44,7 @@ const signup = async (req, res, next) => {
 
         // Create the with the info provided/generated
         const user = await User.create({
+            name,
             email, 
             password: hashedPassword, 
             avatarURL, 
@@ -79,19 +63,16 @@ const signup = async (req, res, next) => {
         };
 
         // Actual email sending
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error('Error sending email:', error);
-            return res.status(500).json({ message: 'Error sending email' });
-          }
-          console.log('Email sent:', info.response);
-          res.status(201).json({
-            user: {
-              email: user.email,
-              subscription: user.subscription,
-              avatarURL: user.avatarURL
+        await sendEmail(mailOptions);
+          
+        // Registration success response with new user details
+        res.status(201).json({
+        user: {
+            name: user.name,
+            email: user.email,
+            subscription: user.subscription,
+            avatarURL: user.avatarURL
             }
-          });
         });
     } catch (err) {
         console.error('Error in signup route:', err);
@@ -169,34 +150,46 @@ const login = async (req, res, next) => {
         // 1st level validation, ensure required fields are populated, email and password
         const { error } = signupSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({ message: error.details[0].message });
+            return res.status(400).json({ message: "Please populate required fields" });
         }
+
         // 2nd level validation, find the user by email, ensure user exists
         const { email, password } = req.body;
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).json({ message: "Email or password is wrong" });
+            return res.status(401).json({ message: "Email not found" });
         }
+
         // 3rd level validation, check if the user has verified their email
         if (!user.verify) {
             return res.status(401).json({ message: 'Please verify your email' });
         }
+
         // 4th level validation, compare the provided password with the stored hashed password
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Email or password is wrong" });
         }
+
         // 5th level validation, generate a JWT token for the authenticated user
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        user.token = token;
-        await user.save();
-        // Respond with the token and user data
+        const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const refreshToken = jwt.sign({id: user._id}, process.env.JWT_REFRESH_SECRET, {expiresIn: '7d'});
+
+        // 6th level create a new session and save it to database
+        const newSession = new Session({
+            accessToken,
+            refreshToken,
+            expiration: Date.now() + 3600000, // Set expiration for 1 hour
+            userId: user._id,
+        });
+        await newSession.save(); // Save session to the database
+
+        // 7th level send tokens back in the response
         res.status(200).json({
-            token,
-            user: {
-                email: user.email,
-                subscription: user.subscription,
-            }
+            message: "Login successful",
+            accessToken,
+            refreshToken,
+            user: { name: user.name, verified: user.verify },
         });
     } catch (err) {
         console.error('Error during login:', err);
