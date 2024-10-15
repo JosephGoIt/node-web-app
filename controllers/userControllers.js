@@ -133,7 +133,7 @@ const resendVerificationEmail = async (req, res, next) => {
             text: `Click the link to verify your email: ${verificationUrl}`  // Email body
         };
         // Acutal sending of the email using Nodemailer
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         // Just a log email has been sent
         // console.log('Verification email sent to:', email);
         // Respond with success
@@ -148,7 +148,7 @@ const resendVerificationEmail = async (req, res, next) => {
 const login = async (req, res, next) => {
     try {
         // 1st level validation, ensure required fields are populated, email and password
-        const { error } = signupSchema.validate(req.body);
+        const { error } = loginSchema.validate(req.body);
         if (error) {
             return res.status(400).json({ message: "Please populate required fields" });
         }
@@ -172,19 +172,34 @@ const login = async (req, res, next) => {
         }
 
         // 5th level validation, generate a JWT token for the authenticated user
-        const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        const refreshToken = jwt.sign({id: user._id}, process.env.JWT_REFRESH_SECRET, {expiresIn: '7d'});
+        const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '5m' });
+        console.log(`generated accessToken on 5th level: ${accessToken}`);
+        const refreshToken = jwt.sign({id: user._id}, process.env.JWT_REFRESH_SECRET, {expiresIn: '10m'});
+        console.log(`generated refreshToken on 5th level: ${refreshToken}`);
 
-        // 6th level create a new session and save it to database
-        const newSession = new Session({
-            accessToken,
-            refreshToken,
-            expiration: Date.now() + 3600000, // Set expiration for 1 hour
-            userId: user._id,
-        });
-        await newSession.save(); // Save session to the database
+        // 6th level check if a session already exists for the user
+        let session = await Session.findOne({ userId: user._id });
 
-        // 7th level send tokens back in the response
+        if (session) {
+            // Session exists, update it with new tokens and expiration
+            console.log('Updating existing session with new tokens');
+            session.accessToken = accessToken;
+            session.refreshToken = refreshToken;
+            session.expiration = Date.now() + 900000; // Set new expiration for 15 minutes
+            await session.save();
+        } else {
+            // No existing session, create a new session
+            console.log('Creating a new session');
+            const newSession = new Session({
+                accessToken,
+                refreshToken,
+                expiration: Date.now() + 900000, // Set expiration for 15 minutes
+                userId: user._id,
+            });
+            await newSession.save();
+        }
+
+        // Send tokens back in the response
         res.status(200).json({
             message: "Login successful",
             accessToken,
@@ -201,11 +216,24 @@ const login = async (req, res, next) => {
 // logout function
 const logout = async (req, res, next) => {
     try {
-        const user = req.user;
-        user.token = null;
-        await user.save();
-        res.status(204).end();
+        const userId = req.user._id; // Assuming the user ID is stored in req.user after authentication
+
+        // Check if there is a session for the user
+        const session = await Session.findOne({ userId });
+
+        if (!session) {
+            // If no session exists, return a 404 response
+            return res.status(404).json({ message: "No active session found for this user" });
+        }
+
+        // If session exists, delete the session
+        await Session.deleteOne({ userId });
+
+        // Send a success response after deleting the session
+        res.status(200).json({ message: "Logout successful, session deleted" });
     } catch (err) {
+        console.error('Error during logout:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
         next(err);
     }
 };

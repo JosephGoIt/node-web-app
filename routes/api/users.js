@@ -300,13 +300,15 @@ router.post("/login", login);
  * @swagger
  * /api/users/logout:
  *   get:
- *     summary: Logout the currently authenticated user and invalidate the token.
- *     tags: [Users]
+ *     summary: Logs out the authenticated user and deletes their session.
+ *     description: This endpoint logs out the authenticated user by checking if there is an active session for the user. If an active session exists, it is deleted. If no session is found, a 404 response is returned. Authentication is required for this endpoint.
+ *     tags:
+ *       - Authentication
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       204:
- *         description: Successfully logged out
+ *       200:
+ *         description: Successfully logged out and session deleted.
  *         content:
  *           application/json:
  *             schema:
@@ -314,7 +316,37 @@ router.post("/login", login);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Logout successful"
+ *                   example: "Logout successful, session deleted"
+ *       404:
+ *         description: No active session found for this user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No active session found for this user"
+ *       401:
+ *         description: Unauthorized. The user is not authenticated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       500:
+ *         description: Internal Server Error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal Server Error"
  */
 router.get("/logout", auth, logout);
 

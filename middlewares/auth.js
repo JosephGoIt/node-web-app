@@ -4,11 +4,9 @@ const User = require('../models/user');
 const Session = require('../models/session');
 
 const auth = async (req, res, next) => {
-  // console.log('auth middlewares hit');
   const token = req.headers['authorization']?.split(' ')[1];
 
   if (!token) {
-    // No token, return error message
     return res.status(401).json({ message: "Access token missing" });
   }
 
@@ -17,18 +15,16 @@ const auth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Find the session associated with this access token
-    const session = await Session.findOne({ accessToken: token, userId: decoded.userId });
+    const session = await Session.findOne({ accessToken: token });
 
     if (!session) {
-      // No session found under the token, or expired, or invalid
-      return res.status(403).json({ message: 'Invalid or expired token' });
+      return res.status(403).json({ message: 'Invalid or no session' });
     }
 
-    // Fetch the user based on the decoded userId
-    const user = await User.findById(decoded.userId);
+    // Fetch the user based on the decoded id (not userId)
+    const user = await User.findById(decoded.id);
 
     if (!user) {
-      // No user found, unlikely
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -36,7 +32,8 @@ const auth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    res.status(403).json({ message: "Invalid or expired token" });
+    console.error('Error verifying token:', err);
+    return res.status(403).json({ message: "Invalid or expired token" });
   }
 };
 
