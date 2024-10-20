@@ -21,51 +21,60 @@ const {
 // signup function
 const signup = async (req, res, next) => {
     try {
-        // 1st level validation, signup validation to ensure required fields are populated
+        // 1st step, 1st level validation, ensures required fields are populated
         const {error} = signupSchema.validate(req.body);
         if (error) {
             return res.status(400).json({message: "Invalid or missing data"});
         }
 
-        // 2nd level validation, check if email is already registered
+        // 2nd step, 2nd level validation, ensures email is unique - not existing in database
         const {name, email, password} = req.body;
         const existingUser = await User.findOne({email});
         if (existingUser) {
             return res.status(409).json({message: "Email in use"});
         }
 
-        // Hash the password, create url for the avatar, generate a verification token
+        // 3rd step, hash the password, generate a verification token, create url for the avatar
         const hashedPassword = await bcrypt.hash(password, 10);
-        const avatarURL = gravatar.url(email, { s: '250', d: 'retro' }, true);
         const verificationToken = uuidv4();  // Generate a unique verification token
+        const avatarURL = gravatar.url(email, { s: '250', d: 'retro' }, true); // Support avatar, optional feature
 
-        // Log the verification token to check if it's being generated, just for debugging
-        // console.log('Generated Verification Token:', verificationToken);
-
-        // Create the with the info provided/generated
+        // 4th step, create user with the info provided/generated
         const user = await User.create({
             name,
             email, 
-            password: hashedPassword, 
-            avatarURL, 
-            verificationToken
+            password: hashedPassword,  
+            verificationToken,
+            avatarURL
         });
 
-        // Create verification link
+        // 5th step, create verification link
         const verificationUrl = `${req.protocol}://${req.get('host')}/api/users/verify/${verificationToken}`;
 
-        // Send verification email
+        // 6th step, create verification email content
         const mailOptions = {
           from: process.env.EMAIL_USER,     // Sender address (email provider/owner)
           to: email,                        // List of receivers (email of user who signup)
           subject: 'Verify your email',     // Subject line
-          text: `Click the link to verify your email: ${verificationUrl}`, // Plain text body
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding:  20px; border: 1px solid #eaeaea; border-radius: 10px;">
+                <h2 style="color: #333;">Hi, ${name}!</h2>
+                <p style="font-size: 16px; color: #555;">Thanks for signing up for <strong>Phone Book App</strong>! Before we can continue, we need to validate your email address.</p>
+                <p style="font-size: 16px; color: #555;">Please click the button below to verify your email address:</p>
+                <a href="${verificationUrl}" 
+                style="display: inline-block; padding: 10px 25px; margin-top: 20px; font-size: 16px; color: #fff; background-color: #fc842d; text-decoration: none; border-radius: 5px;">
+                Verify Email
+                </a>
+                <p style="margin-top: 30px; font-size: 14px; color: #999;">If you did not sign up, please ignore this email.</p>
+                <p style="font-size: 14px; color: #999;">Thanks, <br>GOIT Team 3</p>
+            </div>
+            `,
         };
 
-        // Actual email sending
+        // 7th step, send email verification. sendEmail function utilizes nodemailer
         await sendEmail(mailOptions);
           
-        // Registration success response with new user details
+        // 8th step, signup/registration success response with new user details
         res.status(201).json({
         user: {
             name: user.name,
@@ -84,9 +93,6 @@ const signup = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
     try {
       const { verificationToken } = req.params;
-      
-      // Log the token to ensure it's being captured correctly
-      // console.log("Received verification token:", verificationToken);
 
       // Find the user by verification token
       const user = await User.findOne({ verificationToken });
@@ -129,13 +135,23 @@ const resendVerificationEmail = async (req, res, next) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,  // Sender email address
             to: email,                     // Receiver email address
-            subject: 'Verify your email',   // Subject line
-            text: `Click the link to verify your email: ${verificationUrl}`  // Email body
+            subject: 'Verify your email (re-send)',   // Subject line
+            html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding:  20px; border: 1px solid #eaeaea; border-radius: 10px;">
+                <h2 style="color: #333;">Hi, ${user.name}!</h2>
+                <p style="font-size: 16px; color: #555;">Thanks for signing up for <strong>Phone Book App</strong>! Before we can continue, we need to validate your email address.</p>
+                <p style="font-size: 16px; color: #555;">Please click the button below to verify your email address:</p>
+                <a href="${verificationUrl}" 
+                style="display: inline-block; padding: 10px 25px; margin-top: 20px; font-size: 16px; color: #fff; background-color: #fc842d; text-decoration: none; border-radius: 5px;">
+                Verify Email
+                </a>
+                <p style="margin-top: 30px; font-size: 14px; color: #999;">If you did not sign up, please ignore this email.</p>
+                <p style="font-size: 14px; color: #999;">Thanks, <br>GOIT Team 3</p>
+            </div>
+            `,  // Email body
         };
         // Acutal sending of the email using Nodemailer
         await sendEmail(mailOptions);
-        // Just a log email has been sent
-        // console.log('Verification email sent to:', email);
         // Respond with success
         res.status(200).json({ message: 'Verification email sent' });
     } catch (error) {
@@ -182,14 +198,14 @@ const login = async (req, res, next) => {
 
         if (session) {
             // Session exists, update it with new tokens and expiration
-            console.log('Updating existing session with new tokens');
+            // console.log('Updating existing session with new tokens');
             session.accessToken = accessToken;
             session.refreshToken = refreshToken;
             session.expiration = Date.now() + 900000; // Set new expiration for 15 minutes
             await session.save();
         } else {
             // No existing session, create a new session
-            console.log('Creating a new session');
+            // console.log('Creating a new session');
             const newSession = new Session({
                 accessToken,
                 refreshToken,
@@ -241,8 +257,8 @@ const logout = async (req, res, next) => {
 // current user function
 const currentUser = async (req, res, next) => {
     try {
-        const { email, subscription } = req.user;
-        res.status(200).json({ email, subscription });
+        const { name, email, subscription, avatarURL } = req.user;
+        res.status(200).json({ name, email, subscription, avatarURL });
     } catch (err) {
         next(err);
     }
