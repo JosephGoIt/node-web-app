@@ -268,7 +268,7 @@ const upgradeSub = async (req, res, next) => {
     try {
         const { error } = subscriptionSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({ message: error.details[0].message });
+            return res.status(400).json({ message: 'invalid value' });
         }
         const { subscription } = req.body;
         req.user.subscription = subscription;
@@ -318,27 +318,37 @@ const uploadAva = async (req, res, next) => {
 
 // reset password function
 const resetPassword = async (req, res) => {
-    const { email, password } = req.body;
-    // Validate the request body
-    const { error } = signupSchema.validate({ email, password });
+    // Validate the incoming request using the resetPasswordSchema
+    const { error } = resetPasswordSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
     }
-    try {
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(password, 10);
-      // Find the user by email and update the password
-      const user = await User.findOneAndUpdate({ email }, { password: hashedPassword });
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      res.status(200).json({ message: 'Password reset successful' });
-    } catch (error) {
-      res.status(500).json({ message: 'Internal server error' });
+  
+    const { newPassword, retypeNewPassword } = req.body;
+  
+    // Check if newPassword matches retypeNewPassword
+    if (newPassword !== retypeNewPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
     }
-};
-
-
+  
+    try {
+      // Fetch the authenticated user from the request (added in auth middleware)
+      const user = req.user;
+  
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+  
+      // Update the user's password in the database
+      user.password = hashedPassword;
+      await user.save();
+  
+      // Respond with a success message
+      res.status(200).json({ message: "Password updated successfully" });
+    } catch (err) {
+      console.error("Error updating password:", err);
+      res.status(500).json({ message: "Server error, please try again later" });
+    }
+  };
 
 module.exports = {
     signup,

@@ -499,9 +499,13 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
 /**
  * @swagger
  * /api/users/reset-password:
- *   post:
- *     summary: Reset the user's password using a verification token.
- *     tags: [Users]
+*   patch:
+ *     summary: Reset the authenticated user's password
+ *     description: Allows the authenticated user to reset their password. Requires JWT token for authentication and validates new password.
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -509,21 +513,20 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *           schema:
  *             type: object
  *             required:
- *               - token
  *               - newPassword
+ *               - retypeNewPassword
  *             properties:
- *               token:
- *                 type: string
- *                 description: The password reset token sent to the user's email
- *                 example: "abc123resetToken"
  *               newPassword:
  *                 type: string
- *                 format: password
- *                 description: The new password to set for the user
- *                 example: "newStrongPassword123"
+ *                 description: The new password for the user.
+ *                 example: MyNewSecurePassword123
+ *               retypeNewPassword:
+ *                 type: string
+ *                 description: Retype the new password to confirm.
+ *                 example: MyNewSecurePassword123
  *     responses:
  *       200:
- *         description: Password reset successfully
+ *         description: Password updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -531,9 +534,9 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Password has been reset successfully"
+ *                   example: Password updated successfully
  *       400:
- *         description: Invalid or expired reset token
+ *         description: Bad Request - Invalid input or passwords do not match
  *         content:
  *           application/json:
  *             schema:
@@ -541,9 +544,29 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Invalid or expired token"
+ *                   example: Passwords do not match
+ *       401:
+ *         description: Unauthorized - Access token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Access token missing
+ *       403:
+ *         description: Forbidden - Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid or expired token
  *       500:
- *         description: Server error
+ *         description: Internal server error
  *         content:
  *           application/json:
  *             schema:
@@ -551,9 +574,9 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: Server error, please try again later
  */
-router.post("/reset-password", resetPassword)
+router.patch("/reset-password", auth, resetPassword)
 
 // Export both the login function and the router
 module.exports = {
