@@ -12,6 +12,8 @@ const {
     upgradeSub,
     uploadAva,
     resetPassword,
+    forgotPassword,
+    forgotPasswordReset,
 } = require('../../controllers/userControllers.js');
 
 /**
@@ -302,8 +304,7 @@ router.post("/login", login);
  *   get:
  *     summary: Logs out the authenticated user and deletes their session.
  *     description: This endpoint logs out the authenticated user by checking if there is an active session for the user. If an active session exists, it is deleted. If no session is found, a 404 response is returned. Authentication is required for this endpoint.
- *     tags:
- *       - Authentication
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -502,8 +503,7 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *   patch:
  *     summary: Reset the authenticated user's password
  *     description: Allows the authenticated user to reset their password. Requires JWT token for authentication and validates new password.
- *     tags:
- *       - Users
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -576,7 +576,122 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *                   type: string
  *                   example: Server error, please try again later
  */
-router.patch("/reset-password", auth, resetPassword)
+router.patch("/reset-password", auth, resetPassword);
+
+/**
+ * @swagger
+ * /api/users/forgot-password:
+ *   post:
+ *     summary: Request a forgot-password email
+ *     description: Generates a forgot-password token and sends it to the user's email for password reset.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: Forgot password link sent to your email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Forgot password link sent to your email
+ *       400:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error occurred, try again later
+ */
+router.post("/forgot-password", forgotPassword);
+
+/**
+ * @swagger
+ * /api/users/forgot-password-reset:
+ *   patch:
+ *     summary: Reset password with the verification token
+ *     description: Allows the user to reset their password by providing a valid verification token and new password.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *               - retypeNewPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: "abcdef1234567890"
+ *               newPassword:
+ *                 type: string
+ *                 example: "newSecurePassword123"
+ *               retypeNewPassword:
+ *                 type: string
+ *                 example: "newSecurePassword123"
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Forgot password, password-reset successfully
+ *       400:
+ *         description: Invalid token or passwords do not match
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid or expired token / Passwords do not match
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error, please try again later
+ */
+router.patch("/forgot-password-reset", forgotPasswordReset);
+
 
 // Export both the login function and the router
 module.exports = {

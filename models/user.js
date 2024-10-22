@@ -22,10 +22,6 @@ const userSchema = new Schema(
         default: 'starter',
     },
     avatarURL: String,
-    // token: {
-    //     type: String,
-    //     default: null,
-    // },
     verify: {
         type: Boolean,
         default: false,
@@ -33,6 +29,14 @@ const userSchema = new Schema(
     verificationToken: {
         type: String,
         required: [false, 'Allow it to be null after verification'],
+    },
+    forgotPasswordToken: {
+        type: String,
+        required: [false, 'Allow it to be null after verification'],
+    },
+    forgotPasswordTokenExpiration: {
+        type: Date,
+        required: true,
     },
     },
     { timestamps: true, versionKey: false }

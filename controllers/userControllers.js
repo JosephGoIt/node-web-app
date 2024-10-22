@@ -332,11 +332,11 @@ const resetPassword = async (req, res) => {
       }
   
       console.log(`log user: ${user.name}`);
-  
+
       // Validate the newPassword and retypeNewPassword
-      const { error } = resetPasswordSchema.validate(req.body);
+      const { error } = resetPasswordSchema.validate();
       if (error) {
-        return res.status(400).json({ message: 'Validation error! Please populate required fields' });
+            return res.status(400).json({ message: 'Validation error! Please populate required fields' });
       }
   
       // Check if newPassword matches retypeNewPassword
@@ -347,17 +347,110 @@ const resetPassword = async (req, res) => {
       // Hash the new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       user.password = hashedPassword;
-  
-      // Save the updated user
       await user.save();
   
       // Respond with a success message
-      return res.status(200).json({ message: "Password updated successfully" });
+      return res.status(200).json({ message: "Password-reset successfully" });
     } catch (err) {
       console.error("Error updating password:", err);
       return res.status(500).json({ message: "Server error, please try again later" });
     }
   };
+
+  // Forgot-password function
+  const forgotPassword = async (req, res) => {
+    const {email} = req.body;
+    try {
+        const user = await User.findOne({email});
+        if (!user) {
+            return res.status(400).json({message: "User not found"});
+        }
+        // Generate a forgotPasswordToken
+        const forgotPasswordToken = uuidv4();
+        const forgotPasswordTokenExpires = Date.now() + 3600000;
+        user.forgotPasswordToken = forgotPasswordToken;
+        user.forgotPasswordTokenExpiration = forgotPasswordTokenExpires;
+        await user.save();
+
+        // Send email with the reset link
+        const resetURL = `${process.env.FRONTEND_URL}/forgot-password?token=${forgotPasswordToken}`;
+        // Send the email
+        const mailOptions = {
+            from: process.env.EMAIL_USER,  // Sender email address
+            to: email,                     // Receiver email address
+            subject: 'Forgot Password - Reset Request',   // Subject line
+            html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding:  20px; border: 1px solid #eaeaea; border-radius: 10px;">
+                <h2 style="color: #333;">Hi, ${user.name}!</h2>
+                <p style="font-size: 16px; color: #555;">Thanks for contacting us.</p>
+                <p style="font-size: 16px; color: #555;">Please click the button below to verify your password reset request:</p>
+                <a href="${resetURL}" 
+                style="display: inline-block; padding: 10px 25px; margin-top: 20px; font-size: 16px; color: #fff; background-color: #fc842d; text-decoration: none; border-radius: 5px;">
+                Verify Email
+                </a>
+                <p style="margin-top: 30px; font-size: 14px; color: #999;">If you did not sign up, please ignore this email.</p>
+                <p style="font-size: 14px; color: #999;">Thanks, <br>GOIT Team 3</p>
+            </div>
+            `,  // Email body
+        };
+        // Acutal sending of the email using Nodemailer
+        await sendEmail(mailOptions);
+        // Respond with success
+        res.status(200).json({ message: 'Forgot password link sent to your email' });
+
+    } catch(error) {
+        res.status(500).json({ message: 'Error occurred, try again later' });
+    }
+  };
+
+  // forgotPasswordReset
+  const forgotPasswordReset = async (req, res)=> {
+    const {token, newPassword, retypeNewPassword} = req.body;
+    try {
+        const user = await User.findOne({
+            forgotPasswordToken: token,
+            forgotPasswordTokenExpiration: {$gt: Date.now()}
+        });
+
+        if (!user) {
+            return res.status(400).json({message: "Invalid or expired token"});
+        }
+
+        // Validate the newPassword and retypeNewPassword
+        // const { error } = resetPasswordSchema.validate({newPassword, retypeNewPassword});
+        // if (error) {
+        //     return res.status(400).json({ message: 'Validation error! Please populate required fields' });
+        // }
+  
+      // Check if newPassword matches retypeNewPassword
+      if (newPassword !== retypeNewPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+  
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+    //   user.password = hashedPassword;
+      //   user.forgotPasswordToken = undefined;
+      //   user.forgotPasswordTokenExpiration = undefined;
+      //   await user.save();
+
+      // Use $unset to remove the forgotPasswordToken and forgotPasswordTokenExpiration fields
+     await User.updateOne(
+        { _id: user._id },
+        { 
+          password: hashedPassword,
+          $unset: { forgotPasswordToken: 1, forgotPasswordTokenExpiration: 1 } 
+        }
+    );
+  
+      // Respond with a success message
+      return res.status(200).json({ message: "Forgot password, password-reset successfully" });
+    } catch (err) {
+      console.error("Error updating password:", err);
+      return res.status(500).json({ message: "Server error, please try again later" });
+    }
+  };
+
   
 module.exports = {
     signup,
@@ -369,5 +462,7 @@ module.exports = {
     upgradeSub,
     uploadAva,
     resetPassword,
+    forgotPassword,
+    forgotPasswordReset,
 };
 
