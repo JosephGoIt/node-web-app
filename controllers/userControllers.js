@@ -188,10 +188,10 @@ const login = async (req, res, next) => {
         }
 
         // 5th level validation, generate a JWT token for the authenticated user
-        const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '5m' });
-        console.log(`generated accessToken on 5th level: ${accessToken}`);
-        const refreshToken = jwt.sign({id: user._id}, process.env.JWT_REFRESH_SECRET, {expiresIn: '10m'});
-        console.log(`generated refreshToken on 5th level: ${refreshToken}`);
+        const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        // console.log(`generated accessToken on 5th level: ${accessToken}`);
+        const refreshToken = jwt.sign({userId: user._id}, process.env.JWT_REFRESH_SECRET, {expiresIn: '7h'});
+        // console.log(`generated refreshToken on 5th level: ${refreshToken}`);
 
         // 6th level check if a session already exists for the user
         let session = await Session.findOne({ userId: user._id });
@@ -201,7 +201,7 @@ const login = async (req, res, next) => {
             // console.log('Updating existing session with new tokens');
             session.accessToken = accessToken;
             session.refreshToken = refreshToken;
-            session.expiration = Date.now() + 900000; // Set new expiration for 15 minutes
+            session.expiration = Date.now() + 3600000; // Set new expiration for 1 hr
             await session.save();
         } else {
             // No existing session, create a new session
@@ -209,7 +209,7 @@ const login = async (req, res, next) => {
             const newSession = new Session({
                 accessToken,
                 refreshToken,
-                expiration: Date.now() + 900000, // Set expiration for 15 minutes
+                expiration: Date.now() + 3600000, // Set expiration for 15 minutes
                 userId: user._id,
             });
             await newSession.save();
@@ -261,6 +261,8 @@ const currentUser = async (req, res, next) => {
         res.status(200).json({ name, email, subscription, avatarURL });
     } catch (err) {
         next(err);
+        console.error('Error fetching current user:', err);
+        res.status(500).json({ message: 'Error fetching current user' });
     }
 };
 
@@ -318,38 +320,45 @@ const uploadAva = async (req, res, next) => {
 
 // reset password function
 const resetPassword = async (req, res) => {
-    // Validate the incoming request using the resetPasswordSchema
-    const { error } = resetPasswordSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
-    }
-  
-    const { newPassword, retypeNewPassword } = req.body;
-  
-    // Check if newPassword matches retypeNewPassword
-    if (newPassword !== retypeNewPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-  
     try {
-      // Fetch the authenticated user from the request (added in auth middleware)
-      const user = req.user;
+      const { newPassword, retypeNewPassword } = req.body;
+      const userId = req.user._id; // Assumes auth middleware adds the user object to req
+      console.log(`log userId: ${userId}`);
+  
+      // Find the user by ID
+      let user = await User.findById(userId);  // Fixed User.findOne -> User.findById
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      console.log(`log user: ${user.name}`);
+  
+      // Validate the newPassword and retypeNewPassword
+      const { error } = resetPasswordSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ message: 'Validation error! Please populate required fields' });
+      }
+  
+      // Check if newPassword matches retypeNewPassword
+      if (newPassword !== retypeNewPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
   
       // Hash the new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-  
-      // Update the user's password in the database
       user.password = hashedPassword;
+  
+      // Save the updated user
       await user.save();
   
       // Respond with a success message
-      res.status(200).json({ message: "Password updated successfully" });
+      return res.status(200).json({ message: "Password updated successfully" });
     } catch (err) {
       console.error("Error updating password:", err);
-      res.status(500).json({ message: "Server error, please try again later" });
+      return res.status(500).json({ message: "Server error, please try again later" });
     }
   };
-
+  
 module.exports = {
     signup,
     verifyEmail,

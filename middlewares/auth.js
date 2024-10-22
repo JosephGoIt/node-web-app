@@ -13,16 +13,18 @@ const auth = async (req, res, next) => {
   try {
     // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    console.log(`auth decoded value: ${JSON.stringify(decoded)}`);
     // Find the session associated with this access token
-    const session = await Session.findOne({ accessToken: token });
+    const session = await Session.findOne({ accessToken: token, userId: decoded.userId });
 
     if (!session) {
+      console.log(`session not found during auth`);
       return res.status(403).json({ message: 'Invalid or no session' });
     }
 
     // Fetch the user based on the decoded id (not userId)
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.userId);
+    console.log(`user name: ${user.name}, this is in auth`)
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

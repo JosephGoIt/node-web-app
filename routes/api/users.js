@@ -499,13 +499,13 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
 /**
  * @swagger
  * /api/users/reset-password:
-*   patch:
+ *   patch:
  *     summary: Reset the authenticated user's password
  *     description: Allows the authenticated user to reset their password. Requires JWT token for authentication and validates new password.
  *     tags:
- *       - Authentication
+ *       - Users
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -519,11 +519,11 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *               newPassword:
  *                 type: string
  *                 description: The new password for the user.
- *                 example: MyNewSecurePassword123
+ *                 example: NewSecurePassword123
  *               retypeNewPassword:
  *                 type: string
  *                 description: Retype the new password to confirm.
- *                 example: MyNewSecurePassword123
+ *                 example: NewSecurePassword123
  *     responses:
  *       200:
  *         description: Password updated successfully
@@ -536,7 +536,7 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *                   type: string
  *                   example: Password updated successfully
  *       400:
- *         description: Bad Request - Invalid input or passwords do not match
+ *         description: Bad request - validation error or passwords do not match
  *         content:
  *           application/json:
  *             schema:
@@ -544,7 +544,7 @@ router.patch("/avatar", auth, upload.single("avatar"), uploadAva);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Passwords do not match
+ *                   example: Validation error! Please populate required fields
  *       401:
  *         description: Unauthorized - Access token missing or invalid
  *         content:
