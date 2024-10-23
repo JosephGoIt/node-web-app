@@ -36,7 +36,6 @@ const userSchema = new Schema(
     },
     forgotPasswordTokenExpiration: {
         type: Date,
-        required: true,
     },
     },
     { timestamps: true, versionKey: false }

@@ -18,6 +18,106 @@ const {
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - password
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: The auto-generated id of the user
+ *         name:
+ *           type: string
+ *           description: The user's name
+ *         email:
+ *           type: string
+ *           description: The user's email
+ *         password:
+ *           type: string
+ *           description: The user's hashed password
+ *         subscription:
+ *           type: string
+ *           enum: [starter, pro, business]
+ *           description: The subscription type of the user
+ *         avatarURL:
+ *           type: string
+ *           description: The URL of the user's avatar
+ *         verificationToken:
+ *           type: string
+ *           description: The email verification token for the user
+ *         verify:
+ *           type: boolean
+ *           description: Whether the user's email is verified
+ *       example:
+ *         id: 609d9f6e9675da0017b60ae0
+ *         name: John Doe
+ *         email: johndoe@example.com
+ *         password: "$2a$10$WzRG2LvXsX.3ZcO7s.euy2T.f9pJgK1IogxA58m06d/NwF/uzX30K"  # Hashed password
+ *         subscription: pro
+ *         avatarURL: "/avatars/609d9f6e9675da0017b60ae0.png"
+ *         verificationToken: "b9aece08-0341-47a0-b2e1-833baab8767d"
+ *         verify: true
+ *     SignupUser:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - password
+ *       properties:
+ *         name:
+ *           type: string
+ *         email:
+ *           type: string
+ *         password:
+ *           type: string
+ *       example:
+ *         name: John Doe
+ *         email: johndoe@example.com
+ *         password: password123
+ *     LoginUser:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *         password:
+ *           type: string
+ *       example:
+ *         email: johndoe@example.com
+ *         password: password123
+ *     ForgotPassword:
+ *       type: object
+ *       required:
+ *         - email
+ *       properties:
+ *         email:
+ *           type: string
+ *           description: The user's email
+ *       example:
+ *         email: johndoe@example.com
+ *     ResetPassword:
+ *       type: object
+ *       required:
+ *         - newPassword
+ *         - retypeNewPassword
+ *       properties:
+ *         newPassword:
+ *           type: string
+ *         retypeNewPassword:
+ *           type: string
+ *       example:
+ *         newPassword: newpassword123
+ *         retypeNewPassword: newpassword123
+ */
+
+/**
+ * @swagger
  * /api/users/signup:
  *   post:
  *     summary: Register a new user and send a verification email

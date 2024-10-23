@@ -39,6 +39,12 @@ const contactSchema = Joi.object({
     favorite: Joi.boolean(), // favorite must be a boolean, optional
 });
 
+// Joi schema to validate the favorite field for updating the favorite status
+const favoriteSchema = Joi.object({
+    favorite: Joi.boolean().required(), // favorite must be a boolean and is required
+});
+
+
 module.exports = {
     signupSchema,
     loginSchema,
@@ -46,4 +52,5 @@ module.exports = {
     resetPasswordSchema,
     changePasswordSchema,
     contactSchema,
+    favoriteSchema,
 };

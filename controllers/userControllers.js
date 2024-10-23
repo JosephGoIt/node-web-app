@@ -14,8 +14,6 @@ const {
         loginSchema,
         subscriptionSchema,
         resetPasswordSchema,
-        changePasswordSchema,
-        contactSchema,
 } = require('../helpers/formValidation');
 
 // signup function
@@ -37,7 +35,7 @@ const signup = async (req, res, next) => {
         // 3rd step, hash the password, generate a verification token, create url for the avatar
         const hashedPassword = await bcrypt.hash(password, 10);
         const verificationToken = uuidv4();  // Generate a unique verification token
-        const avatarURL = gravatar.url(email, { s: '250', d: 'retro' }, true); // Support avatar, optional feature
+        const avatarURL = gravatar.url(email, { s: '250', d: 'retro' }, true); // Avatar, optional feature
 
         // 4th step, create user with the info provided/generated
         const user = await User.create({
@@ -53,10 +51,10 @@ const signup = async (req, res, next) => {
 
         // 6th step, create verification email content
         const mailOptions = {
-          from: process.env.EMAIL_USER,     // Sender address (email provider/owner)
-          to: email,                        // List of receivers (email of user who signup)
-          subject: 'Verify your email',     // Subject line
-          html: `
+            from: process.env.EMAIL_USER,     // Sender address (email provider/owner)
+            to: email,                        // List of receivers (email of user who signup)
+            subject: 'Verify your email',     // Subject line
+            html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding:  20px; border: 1px solid #eaeaea; border-radius: 10px;">
                 <h2 style="color: #333;">Hi, ${name}!</h2>
                 <p style="font-size: 16px; color: #555;">Thanks for signing up for <strong>Phone Book App</strong>! Before we can continue, we need to validate your email address.</p>
@@ -92,31 +90,31 @@ const signup = async (req, res, next) => {
 // verifyEmail function
 const verifyEmail = async (req, res, next) => {
     try {
-      const { verificationToken } = req.params;
+        const { verificationToken } = req.params;
 
-      // Find the user by verification token
-      const user = await User.findOne({ verificationToken });
-      if (!user) {
-        // console.error("User not found with this verification token:", verificationToken);
-        return res.status(404).json({ message: 'User not found' });
-      }
-      // Update user verification status
-      user.verificationToken = null; // Set the token to null after successful verification
-      user.verify = true;            // Set the verification status to true
-      await user.save();             // Save changes in
-      res.status(200).json({ message: 'Verification successful' });
+        // Find the user by verification token
+        const user = await User.findOne({ verificationToken });
+        if (!user) {
+            // console.error("User not found with this verification token:", verificationToken);
+            return res.status(404).json({ message: 'User not found' });
+        }
+        // Update user verification status
+        user.verificationToken = null; // Set the token to null after successful verification
+        user.verify = true;            // Set the verification status to true
+        await user.save();             // Save changes in
+        res.status(200).json({ message: 'Verification successful' });
     } catch (error) {
-        //   console.error("Error during verification process:", error);
+        console.error("Error during verification process:", error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
-// Resend verification email function
+// resend verification email function
 const resendVerificationEmail = async (req, res, next) => {
     const { email } = req.body;
     // Validate email input
     if (!email) {
-      return res.status(400).json({ message: 'Missing required field email' });
+        return res.status(400).json({ message: 'Missing required field email' });
     }
     try {
         // Find the user by email
@@ -160,7 +158,7 @@ const resendVerificationEmail = async (req, res, next) => {
     }
 };
 
-// The login function
+// login function
 const login = async (req, res, next) => {
     try {
         // 1st level validation, ensure required fields are populated, email and password
@@ -254,7 +252,7 @@ const logout = async (req, res, next) => {
     }
 };
 
-// current user function
+// get current user function
 const currentUser = async (req, res, next) => {
     try {
         const { name, email, subscription, avatarURL } = req.user;
@@ -266,6 +264,7 @@ const currentUser = async (req, res, next) => {
     }
 };
 
+// upgrade subscription function
 const upgradeSub = async (req, res, next) => {
     try {
         const { error } = subscriptionSchema.validate(req.body);
@@ -318,7 +317,7 @@ const uploadAva = async (req, res, next) => {
     }
 };
 
-// reset password function
+// reset password function or change password - when user already logged in/authenticated
 const resetPassword = async (req, res) => {
     try {
       const { newPassword, retypeNewPassword } = req.body;
@@ -357,7 +356,7 @@ const resetPassword = async (req, res) => {
     }
   };
 
-  // Forgot-password function
+  // forgot-password function - unable to login not authenticated - token will be send to allow reset
   const forgotPassword = async (req, res) => {
     const {email} = req.body;
     try {
@@ -403,7 +402,7 @@ const resetPassword = async (req, res) => {
     }
   };
 
-  // forgotPasswordReset
+  // forgotPasswordReset - must have the password reset token available in front end
   const forgotPasswordReset = async (req, res)=> {
     const {token, newPassword, retypeNewPassword} = req.body;
     try {
@@ -429,9 +428,9 @@ const resetPassword = async (req, res) => {
   
       // Hash the new password
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-    //   user.password = hashedPassword;
-      //   user.forgotPasswordToken = undefined;
-      //   user.forgotPasswordTokenExpiration = undefined;
+        //   user.password = hashedPassword;
+      //   user.forgotPasswordToken = null;
+      //   user.forgotPasswordTokenExpiration = null;
       //   await user.save();
 
       // Use $unset to remove the forgotPasswordToken and forgotPasswordTokenExpiration fields

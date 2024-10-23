@@ -1,18 +1,9 @@
 const Contact = require('../models/contact'); // Contact model schema from the database
 const Joi = require('joi'); // Joi module for input validation
-
-// Joi schema to validate contact fields for adding or updating a contact
-const contactSchema = Joi.object({
-    name: Joi.string().required(), // name must be a string and is required
-    email: Joi.string().email().required(), // email must be valid and is required
-    phone: Joi.string().required(), // phone must be a string and is required
-    favorite: Joi.boolean(), // favorite must be a boolean, optional
-});
-
-// Joi schema to validate the favorite field for updating the favorite status
-const favoriteSchema = Joi.object({
-    favorite: Joi.boolean().required(), // favorite must be a boolean and is required
-});
+const {
+    contactSchema,
+    favoriteSchema,
+} = require('../helpers/formValidation');
 
 // Function to list contacts for a user with pagination and optional filtering by 'favorite'
 const listContacts = async (userId, { page = 1, limit = 20, favorite }) => {
