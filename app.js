@@ -49,9 +49,10 @@ app.use((err, req, res, next) => {
 })
 
 const PORT = process.env.PORT || 3000;
+const host = '0.0.0.0';  // Explicitly bind to 0.0.0.0
 
-app.listen(PORT, '::1', () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, host, () => {
+  console.log(`Server running on http://${host}:${PORT}`);
 });
 
 module.exports = app
