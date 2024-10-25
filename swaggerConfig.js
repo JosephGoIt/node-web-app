@@ -11,6 +11,10 @@ const swaggerOptions = {
     },
     servers: [
       {
+        url: "https://phonebook-backend-ys8p.onrender.com",  // Live server
+        description: "Live server",
+      },
+      {
         url: "http://localhost:3000",  // Local development server
         description: "Development server",
       },
