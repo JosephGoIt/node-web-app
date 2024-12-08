@@ -44,7 +44,6 @@ const favoriteSchema = Joi.object({
     favorite: Joi.boolean().required(), // favorite must be a boolean and is required
 });
 
-
 module.exports = {
     signupSchema,
     loginSchema,

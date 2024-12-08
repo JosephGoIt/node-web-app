@@ -5,6 +5,7 @@ const logger = require('morgan');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path'); // to access public directory
+const aiRoutes = require("./routes/api/aiRoutes");
 
 // Import routes
 const {router: usersRouter} = require('./routes/api/users');
@@ -36,6 +37,9 @@ app.use('/avatars', express.static(path.join(__dirname, 'public/avatars')));
 // Routes
 app.use('/api/users', usersRouter);
 app.use('/api/contacts', contactsRouter);
+
+// Add the AI routes
+app.use("/api/ai", aiRoutes);
 
 // Swagger docs route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));  // Serve swagger documentation
