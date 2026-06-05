@@ -1,4 +1,4 @@
-FROM node:16
+FROM node:20
 
 # Set working directory
 WORKDIR /usr/src/app
@@ -6,6 +6,8 @@ WORKDIR /usr/src/app
 # Copy package.json and install dependencies
 COPY package*.json ./
 RUN npm install
+
+RUN npx playwright install --with-deps
 
 # Copy the rest of the application
 COPY . .
