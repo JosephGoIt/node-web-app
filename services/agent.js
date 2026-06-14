@@ -16,15 +16,15 @@ class BlueBotAgent {
 
     async run() {
         console.log(`🤖 Agent Instance Running Task...`);
-        // headless: false keeps the real browser UI visible, which helps pass
-        // bot-detection checks that fingerprint headless Chrome behaviour
-        const browser = await chromium.launch({ headless: false });
-        // 1366x768 mimics a common laptop viewport; some sites render
-        // differently (or hide elements) on non-standard screen sizes
-        const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
-        const page = await context.newPage();
-
+        let browser;
         try {
+            // headless: false keeps the real browser UI visible, which helps pass
+            // bot-detection checks that fingerprint headless Chrome behaviour
+            browser = await chromium.launch({ headless: false });
+            // 1366x768 mimics a common laptop viewport; some sites render
+            // differently (or hide elements) on non-standard screen sizes
+            const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+            const page = await context.newPage();
             // A. Planning — ask the AI to parse the natural-language task into
             //    a structured { url, id } so the rest of the run uses typed data
             const plan = await this._aiJson(`Extract URL and ID from "${this.task}". JSON: {"url":"string", "id":"string"}`);
@@ -69,7 +69,7 @@ class BlueBotAgent {
 
             const { index } = await this._aiJson(`Which index for tracking number "${plan.id}"? Elements: ${JSON.stringify(inputs)}. JSON: {"index":0}`);
 
-            if (index === -1) throw new Error("AI could not find a suitable tracking field.");
+            if (index === undefined || index === null || index < 0) throw new Error("AI could not find a suitable tracking field.");
 
             // D. Interaction — use JS injection instead of page.type() because
             //    React/Vue inputs ignore native keyboard events unless the synthetic
@@ -123,7 +123,12 @@ class BlueBotAgent {
             console.log("DEBUG: Raw AI Response was:", text);
             throw new Error(`AI failed to return JSON structure.`);
         }
-        return JSON.parse(match[0]);
+        try {
+            return JSON.parse(match[0]);
+        } catch (e) {
+            console.log("DEBUG: Raw AI Response was:", text);
+            throw new Error(`AI returned invalid JSON: ${e.message}`);
+        }
     }
 }
 
