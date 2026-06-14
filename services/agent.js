@@ -45,48 +45,37 @@ class BlueBotAgent {
             });
             // Escape dismisses any remaining focus traps (e.g. video overlays)
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(3000);
+            await page.waitForTimeout(5000);
 
-            // C. Observe — collect visible input fields so the AI can pick the
-            //    correct tracking field by reading placeholder/id/name context.
-            //    .mc-track-input is a custom Web Component used by Maersk that
-            //    sits inside Shadow DOM and is not reachable via standard selectors
-            const inputs = await page.evaluate(() => {
-                const allInputs = [];
-                const nodes = document.querySelectorAll('input, textarea, [role="textbox"], .mc-track-input');
-                nodes.forEach((el, i) => {
-                    // offsetParent === null means the element is hidden (display:none
-                    // or visibility:hidden); skip it so the AI isn't confused by
-                    // invisible fields that can't be typed into
-                    if (el.offsetParent !== null) {
-                        allInputs.push(`[${i}] Placeholder: ${el.placeholder} | ID: ${el.id} | Name: ${el.name}`);
-                    }
-                });
-                return allInputs;
-            });
+            // C. Observe — Playwright's locator API pierces Shadow DOM automatically,
+            //    fixing the two bugs that broke headless: offsetParent returning null
+            //    for position:fixed inputs and querySelectorAll not reaching shadow roots
+            const allLocators = await page.locator('input, textarea, [role="textbox"]').all();
+            const visibleLocators = [];
+            for (const loc of allLocators) {
+                if (await loc.isVisible()) visibleLocators.push(loc);
+            }
+
+            const inputs = await Promise.all(visibleLocators.map(async (loc, i) => {
+                const [placeholder, id, name] = await Promise.all([
+                    loc.getAttribute('placeholder').catch(() => ''),
+                    loc.getAttribute('id').catch(() => ''),
+                    loc.getAttribute('name').catch(() => ''),
+                ]);
+                return `[${i}] Placeholder: ${placeholder || ''} | ID: ${id || ''} | Name: ${name || ''}`;
+            }));
 
             if (inputs.length === 0) throw new Error("No visible input fields found on the page.");
 
             const { index } = await this._aiJson(`Which index for tracking number "${plan.id}"? Elements: ${JSON.stringify(inputs)}. JSON: {"index":0}`);
 
-            if (index === undefined || index === null || index < 0) throw new Error("AI could not find a suitable tracking field.");
+            if (index === undefined || index === null || index < 0 || index >= visibleLocators.length)
+                throw new Error("AI could not find a suitable tracking field.");
 
-            // D. Interaction — use JS injection instead of page.type() because
-            //    React/Vue inputs ignore native keyboard events unless the synthetic
-            //    'input' and 'change' events are dispatched to trigger state updates
-            console.log(`⌨️ JS-Typing "${plan.id}" into field [${index}]...`);
-            await page.evaluate(({ idx, val }) => {
-                const el = document.querySelectorAll('input, textarea, [role="textbox"], .mc-track-input')[idx];
-                if (el) {
-                    el.focus();
-                    el.value = val;
-                    // bubbles: true propagates the event up the component tree
-                    // so parent components (e.g. a search wrapper) also react
-                    el.dispatchEvent(new Event('input', { bubbles: true }));
-                    el.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }, { idx: index, val: plan.id });
-
+            // D. Interaction — locator.fill() handles Shadow DOM and correctly fires
+            //    React/Vue synthetic events without needing manual dispatchEvent calls
+            console.log(`⌨️ Typing "${plan.id}" into field [${index}]...`);
+            await visibleLocators[index].fill(plan.id);
             await page.keyboard.press('Enter');
 
             // E. Extraction — 12 s covers typical carrier site response times;
