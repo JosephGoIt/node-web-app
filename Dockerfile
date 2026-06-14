@@ -1,17 +1,11 @@
-FROM node:20
+FROM mcr.microsoft.com/playwright:v1.59.1-noble
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and install dependencies
 COPY package*.json ./
 RUN npm install
 
-RUN npx playwright install --with-deps
-
-# Copy the rest of the application
 COPY . .
 
-# Expose port and start application
 EXPOSE 3000
 CMD ["npm", "start"]

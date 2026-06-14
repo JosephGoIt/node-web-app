@@ -20,7 +20,7 @@ class BlueBotAgent {
         try {
             // headless: false keeps the real browser UI visible, which helps pass
             // bot-detection checks that fingerprint headless Chrome behaviour
-            browser = await chromium.launch({ headless: false });
+            browser = await chromium.launch({ headless: true });
             // 1366x768 mimics a common laptop viewport; some sites render
             // differently (or hide elements) on non-standard screen sizes
             const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
